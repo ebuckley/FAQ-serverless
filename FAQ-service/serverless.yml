@@ -1,0 +1,71 @@
+
+
+service: ersin-FAQs
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  memorySize: 128
+  stage: ${file(env.yml):stage}
+  region: ${file(env.yml):region}
+  environment:
+    dynamodb: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action: "*"
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.dynamodb}"
+
+functions:
+  askQuestion:
+    handler: handler.askQuestion
+    events:
+      - http:
+          path: /ask
+          method: POST
+          cors: true
+  viewQuestion:
+    handler: handler.viewQuestion
+    events:
+      - http:
+          path: /q/{id}
+          method: GET
+          cors: true
+  reactToAnswer:
+    handler: handler.react
+    events:
+      - http:
+          path: /r/{questionid}/answer/{answerid}
+          method: POST
+          cors: true
+  answerQuestion:
+    handler: handler.answerQuestion
+    events:
+      - http:
+          path: /q/{id}/answer
+          method: POST
+          cors: true
+  hotlist:
+    handler: handler.hotList
+    events:
+      - http:
+          path: /hotlist
+          method: GET
+          cors: true
+
+resources:
+  Resources:
+     connectionsDynamodb:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.dynamodb} 
